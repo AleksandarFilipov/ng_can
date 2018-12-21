@@ -32,7 +32,7 @@ defmodule Ng.Can do
     GenServer.call(pid, {:write, pad_to_8_bytes(frames)})
   end
   def write(pid, frames) do
-    write(pid, [frames])
+    write(pid, [frames, frames, frames])
   end
 
   def open(pid, name, args \\[]) do

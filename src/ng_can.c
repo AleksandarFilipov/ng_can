@@ -73,29 +73,55 @@ static struct can_frame parse_can_frame(const char *req, int *req_index)
     memcpy(can_frame.data, data, 8);
     return can_frame;
 }
+//id 4, dlc, 4, 8
+
+int counter = 0;
 
 static int write_buffer(const char *req, int *req_index, int num_frames)
 {
+  warn("\nEnter write_buffer 1 *req_index %d  num_frames %d", *req_index, num_frames);
   for (int i = 0; i < num_frames; i++) {
     int this_frame_offset = *req_index;
+    int type;
+    int size;
+    int frame_size = ei_get_type(req, req_index, &type, &size);
+    warn("\nEnter write_buffer 2 *req_index %d this_frame_offset %d type %d, size %d", *req_index, this_frame_offset, type, size);
+    // int this_frame_offset = i * ENCODED_WRITE_FRAME_SIZE;
     struct can_frame can_frame = parse_can_frame(req, req_index);
     int write_result = can_write(can_port, &can_frame);
 
+    counter ++;
+    if (counter % 100 == 0) {
+        write_result = -1;
+    }
+
+    // aleks the following code does not work, nor removing it makes all better. Free, where is free(can_port->write_buffer); allocated. Why should it be freed.
+    // how is the code intended to traverse all entries when i (iterator) is never used?
     //ENETDOWN is okay since we're restarting using `ip link` in ng_can.ex?
-    if(write_result < 0 && (errno == EAGAIN || errno == ENOBUFS || errno == ENETDOWN)) {
+    // if(write_result < 0 && (errno == EAGAIN || errno == ENOBUFS || errno == ENETDOWN)) {
+    if(write_result < 0) {
+
+      // char *err_str[64];
+      // sprintf(err_str, "ng_can: num_frames %d: ", num_unsent);
+      // warn(err_str);
+
       //enqueue the remaining frames
       int num_unsent = num_frames - i;
       can_port->write_buffer_size = num_unsent;
       int num_bytes = ENCODED_WRITE_FRAME_SIZE * num_unsent;
       char *buffer = malloc(num_bytes);
       memcpy(buffer, req + this_frame_offset, num_bytes);
-      free(can_port->write_buffer);
+      if (can_port->write_buffer == NULL) {
+        free(can_port->write_buffer);
+      }
       can_port->write_buffer = buffer;
+      warn("\nAdded entry to cache, req_index is %d this_frame_offset %d", *req_index, this_frame_offset);
       return -1;
     } else if(write_result < 0) {
       char *err_str[64];
       sprintf(err_str, "write() error: %d", errno);
       send_error_notification(err_str);
+      // warn(err_str);
       errx(EXIT_FAILURE, err_str);
     }
   }
@@ -106,8 +132,10 @@ static int write_buffer(const char *req, int *req_index, int num_frames)
 static void handle_write(const char *req, int *req_index)
 {
   int num_frames;
+  warn("\nwrite called req_index %d, *req_index %d", req_index, *req_index);
   if(ei_decode_list_header(req, req_index, &num_frames) < 0)
     errx(EXIT_FAILURE, "Expecting a list of frames");
+  warn("\nwrite called 2 req_index %d, *req_index %d", req_index, *req_index);
   write_buffer(req, req_index, num_frames);
   send_ok_response();
 }
@@ -115,6 +143,7 @@ static void handle_write(const char *req, int *req_index)
 static void process_write_buffer()
 {
   int req_index = 0;
+  warn("flushing %d", can_port->write_buffer_size);
   if(write_buffer(can_port->write_buffer, &req_index, can_port->write_buffer_size) == 0){
     free(can_port->write_buffer);
     can_port->write_buffer_size = 0;
@@ -221,6 +250,7 @@ int main(int argc, char *argv[])
 
     debug("Starting!");
 #endif
+  warn("==============ENABLE============");
   if (can_init(&can_port) < 0)
     errx(EXIT_FAILURE, "can_init failed");
 
