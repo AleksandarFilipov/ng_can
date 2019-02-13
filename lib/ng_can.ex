@@ -127,11 +127,12 @@ defmodule Ng.Can do
   end
 
   defp pad_to_8_bytes(frames) do
-    Enum.map frames, fn {id, data} ->
-      bits_padding = (8 - byte_size(data)) * 8
-      padded_data = data <> <<0 :: size(bits_padding)>>
-      {id, padded_data}
-    end
+    frames
+    # Enum.map frames, fn {id, data} ->
+    #   bits_padding = (8 - byte_size(data)) * 8
+    #   padded_data = data <> <<0 :: size(bits_padding)>>
+    #   {id, padded_data}
+    # end
   end
 
   defp call_port(state, command, arguments, timeout \\ 4000) do
