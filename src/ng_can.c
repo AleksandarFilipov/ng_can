@@ -128,7 +128,7 @@ static void process_write_buffer()
 static void handle_open(const char *req, int *req_index)
 {
   int arity;
-  if (ei_decode_tuple_header(req, req_index, &arity) < 0 || arity != 3) {
+  if (ei_decode_tuple_header(req, req_index, &arity) < 0 || arity != 4) {
     errx(EXIT_FAILURE, "badopentuple");
   }
   char interface_name[64];
@@ -136,6 +136,18 @@ static void handle_open(const char *req, int *req_index)
   if(ei_decode_binary(req, req_index, interface_name, &binary_len) < 0) {
     errx(EXIT_FAILURE, "enoent");
   }
+
+  //REVIEW: is this necessary?
+  interface_name[binary_len] = '\0';
+
+  char interface_type[64];
+  if(ei_decode_binary(req, req_index, interface_type, &binary_len) < 0) {
+    errx(EXIT_FAILURE, "enoent");
+  }
+
+  //REVIEW: is this necessary?
+  interface_type[binary_len] = '\0';
+
 
   long rcvbuf_size;
   if(ei_decode_long(req, req_index, &rcvbuf_size) < 0)
@@ -145,8 +157,6 @@ static void handle_open(const char *req, int *req_index)
   if(ei_decode_long(req, req_index, &sndbuf_size) < 0)
     errx(EXIT_FAILURE, "nowritebufsize");
 
-  //REVIEW: is this necessary?
-  interface_name[binary_len] = '\0';
 
   if (can_is_open(can_port))
     can_close(can_port);
