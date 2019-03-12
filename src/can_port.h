@@ -20,9 +20,12 @@ struct can_port {
 
     //read buffer stuff
     char *read_buffer;
+
+    //is CAN FD?
+    bool is_canfd;
 };
 
-int can_open(struct can_port *port, char *interface_name, long *rcvbuf_size, long *sndbuf_size);
+int can_open(struct can_port *port, char *interface_name, char *interface_type, long *rcvbuf_size, long *sndbuf_size);
 
 int can_is_open(struct can_port *port);
 
@@ -32,8 +35,14 @@ int can_close(struct can_port *port);
 
 int can_write(struct can_port *can_port, struct can_frame *can_frame);
 
+int canfd_write(struct can_port *can_port, struct canfd_frame *canfd_frame);
+
 int can_read(struct can_port *can_port, struct can_frame *can_frame);
+
+int canfd_read(struct can_port *can_port, struct canfd_frame *canfd_frame);
 
 int can_read_into_buffer(struct can_port *can_port, int *resp_index);
 
 void encode_can_frame(char *resp, int *resp_index, struct can_frame *can_frame);
+
+void encode_canfd_frame(char *resp, int *resp_index, struct canfd_frame *canfd_frame);
