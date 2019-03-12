@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 {
 #ifdef DEBUG
     char logfile[164];
-    snprintf(logfile, sizeof(logfile) / sizeof(logfile[0]), "/home/local/VCCNET/afilipov/compentence/udp_can/signal_server/ng_can-%d.log", (int) getpid());
+    snprintf(logfile, sizeof(logfile) / sizeof(logfile[0]), "ng_can-%d.log", (int) getpid());
     FILE *fp = fopen(logfile, "w+");
     log_location = fp;
 
@@ -292,7 +292,6 @@ int main(int argc, char *argv[])
     struct pollfd fdset[3];
     int num_listeners = 2;
 
-
     fdset[0].fd = STDIN_FILENO;
     fdset[0].events = POLLIN;
     fdset[0].revents = 0;
@@ -307,7 +306,6 @@ int main(int argc, char *argv[])
     }
 
     int rc = poll(fdset, num_listeners, -1);
-    debug("looping");
     if (rc < 0) {
       // Retry if EINTR
       if (errno == EINTR)
@@ -322,12 +320,10 @@ int main(int argc, char *argv[])
     }
     //ready to work through write buffer
     if (fdset[1].revents & POLLOUT) {
-      debug("pollout");
       process_write_buffer();
     }
 
     if (fdset[1].revents & POLLIN) {
-      debug("pollin");
       notify_read();
     }
   }
