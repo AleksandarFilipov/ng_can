@@ -29,7 +29,7 @@ defmodule Ng.Can do
   end
 
   def write(pid, frames) when is_list(frames) do
-    GenServer.call(pid, {:write, pad_to_8_bytes(frames)})
+    GenServer.call(pid, {:write, frames})
   end
   def write(pid, frames) do
     write(pid, [frames])
@@ -97,9 +97,6 @@ defmodule Ng.Can do
   end
 
   def handle_call({:open, interface, type, args}, {from_pid, _}, state) do
-    :os.cmd('ip link set #{interface} type can bitrate 250000 triple-sampling on restart-ms 100')
-    :os.cmd 'ip link set #{interface} up type can'
-    :os.cmd 'ifconfig #{interface} txqueuelen 1000'
     response = call_port(state, :open,
                          {interface, type, args[:rcvbuf] || @default_bufsize,
                            args[:sndbuf] || @default_bufsize
@@ -124,15 +121,6 @@ defmodule Ng.Can do
 
   def terminate(reason, state) do
     Logger.info "Ng.Can terminating with reason: #{inspect reason}"
-  end
-
-  defp pad_to_8_bytes(frames) do
-    frames
-    # Enum.map frames, fn {id, data} ->
-    #   bits_padding = (8 - byte_size(data)) * 8
-    #   padded_data = data <> <<0 :: size(bits_padding)>>
-    #   {id, padded_data}
-    # end
   end
 
   defp call_port(state, command, arguments, timeout \\ 4000) do
