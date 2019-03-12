@@ -53,8 +53,11 @@ int can_close(struct can_port *port)
 int can_open(struct can_port *can_port, char *interface_name, char *interface_type, long *rcvbuf_size, long *sndbuf_size)
 {
   int s;
+  int ret;
+  int canfd_on;
   struct sockaddr_can addr;
   struct ifreq ifr;
+
 
   //open socket
   if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0)
@@ -72,9 +75,18 @@ int can_open(struct can_port *can_port, char *interface_name, char *interface_ty
   //get interface type
   can_port->is_canfd = (0 == strcmp("canfd", interface_type));
 
+  char err_str[256] = { 0 };
+  snprintf(err_str, 256, "canport mode is: %d", can_port->is_canfd);
+  debug(err_str);
+
   //add busoff error filter
   can_err_mask_t err_mask = CAN_ERR_MASK;
   setsockopt(s, SOL_CAN_RAW, CAN_RAW_ERR_FILTER, &err_mask, sizeof(err_mask));
+
+  /* try to switch the bridge socket into CAN FD mode */
+  canfd_on = (int)can_port->is_canfd;
+  setsockopt(s, SOL_CAN_RAW, CAN_RAW_FD_FRAMES, &canfd_on, sizeof(canfd_on));
+
 
   //set buffersizes
   if(setsockopt(s, SOL_SOCKET, SO_RCVBUF, rcvbuf_size, sizeof(*rcvbuf_size)) < 0)
@@ -85,8 +97,10 @@ int can_open(struct can_port *can_port, char *interface_name, char *interface_ty
   //bind
   addr.can_family = AF_CAN;
   addr.can_ifindex = ifr.ifr_ifindex;
-
-  return bind(s, (struct sockaddr *)&addr, sizeof(addr));
+  ret = bind(s, (struct sockaddr *)&addr, sizeof(addr));
+  snprintf(err_str, 256, "allo good: %d", ret);
+  debug(err_str);
+  return ret;
 }
 
 int can_write(struct can_port *can_port, struct can_frame *can_frame)
@@ -135,6 +149,10 @@ int can_read_into_buffer(struct can_port *can_port, int *resp_index)
 
   bool is_canfd = can_port->is_canfd;
 
+  char err_str[256] = { 0 };
+  snprintf(err_str, 256, "read_into: %d", can_port->is_canfd);
+  debug(err_str);
+
   for(num_read = 0; num_read < 1000; num_read++)
   {
     int res;
@@ -147,14 +165,14 @@ int can_read_into_buffer(struct can_port *can_port, int *resp_index)
     {
       res = read(can_port->fd, &can_frame, sizeof(struct can_frame));
     }
-    
+
 
     if(res <= 0)
     {
       //I think ENETDOWN is ok because catching netdown at a higher level?
       return (errno == EAGAIN || errno == ENETDOWN)? num_read : -1;
-    } 
-    else 
+    }
+    else
     {
       if (is_canfd)
       {

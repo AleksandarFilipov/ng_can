@@ -14,7 +14,7 @@ CFLAGS += -std=c99 -D_GNU_SOURCE
 CC ?= $(CROSSCOMPILER)gcc
 
 ###################
-#CFLAGS += -DDEBUG
+CFLAGS += -DDEBUG
 
 SRC=$(wildcard src/*.c)
 
